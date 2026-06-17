@@ -29,10 +29,12 @@ SOURCE_NOTIFY = "🔔 新用户来源：\n用户ID: {user_id}\n用户名: @{user
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-user_message_map = {}
+# 存储用户 ID 列表（用于管理员回复时找到最近联系的用户）
+last_user_id = None
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global last_user_id
     user = update.effective_user
     user_id = user.id
     username = user.username or "无用户名"
@@ -57,6 +59,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global last_user_id
     user = update.effective_user
     user_id = user.id
     username = user.username or "无用户名"
@@ -64,38 +67,40 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     if user_id == ADMIN_ID:
         return
     try:
-        sent = await context.bot.send_message(
+        # 记录最近联系的用户
+        last_user_id = user_id
+        await context.bot.send_message(
             chat_id=ADMIN_ID,
             text=f"📩 用户 @{username} (ID: {user_id}) 说：\n{text}"
         )
-        user_message_map[sent.message_id] = user_id
-        logger.info(f"✅ 已记录映射: 消息ID {sent.message_id} -> 用户 {user_id}")
         await update.message.reply_text(MSG_SENT)
+        logger.info(f"✅ 用户 {user_id} 的消息已转发")
     except Exception as e:
         logger.error(f"转发失败: {e}")
         await update.message.reply_text("发送失败，请稍后再试。")
 
 
 async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global last_user_id
     message = update.message
     user_id = update.effective_user.id
-    if user_id != ADMIN_ID or not message.reply_to_message:
+    if user_id != ADMIN_ID:
         return
-    original_msg_id = message.reply_to_message.message_id
-    target_user_id = user_message_map.get(original_msg_id)
-    logger.info(f"🔍 查找映射: 消息ID {original_msg_id} -> 目标用户 {target_user_id}")
-    if not target_user_id:
-        await message.reply_text("无法找到对应的用户，可能消息已过期。")
+    # 如果管理员发的是 / 开头的命令，不处理
+    if message.text and message.text.startswith('/'):
+        return
+    # 如果没有最近联系的用户，提示
+    if not last_user_id:
+        await message.reply_text("还没有用户联系过，请等待用户发送消息。")
         return
     try:
         reply_text = REPLY_TEMPLATE.format(message=message.text)
-        await context.bot.send_message(chat_id=target_user_id, text=reply_text)
-        await message.reply_text("✅ 回复已发送给用户。")
-        del user_message_map[original_msg_id]
-        logger.info(f"✅ 回复已发送给用户 {target_user_id}")
+        await context.bot.send_message(chat_id=last_user_id, text=reply_text)
+        await message.reply_text(f"✅ 已回复给用户 {last_user_id}")
+        logger.info(f"✅ 已回复给用户 {last_user_id}")
     except Exception as e:
         logger.error(f"回复用户失败: {e}")
-        await message.reply_text("回复发送失败。")
+        await message.reply_text(f"回复失败：{e}")
 
 
 async def reply_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -121,11 +126,13 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("reply", reply_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_message))
-    app.add_handler(MessageHandler(filters.TEXT & filters.REPLY, handle_admin_reply))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_admin_reply))
     logger.info("机器人已启动，按 Ctrl+C 停止")
     app.run_polling()
 
 
+if __name__ == "__main__":
+    main()
 if __name__ == "__main__":
     main()
     main()
