@@ -99,6 +99,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
         # 记录消息映射，以便管理员回复时找到目标用户
         user_message_map[sent.message_id] = user_id
+        logger.info(f"✅ 已记录映射: 消息ID {sent.message_id} -> 用户 {user_id}")
         # 回复用户表示已收到
         await update.message.reply_text(MSG_SENT)
     except Exception as e:
@@ -121,6 +122,8 @@ async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE)
     original_msg_id = message.reply_to_message.message_id
     target_user_id = user_message_map.get(original_msg_id)
 
+    logger.info(f"🔍 查找映射: 消息ID {original_msg_id} -> 目标用户 {target_user_id}")
+
     if not target_user_id:
         await message.reply_text("无法找到对应的用户，可能消息已过期。")
         return
@@ -135,6 +138,7 @@ async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await message.reply_text("✅ 回复已发送给用户。")
         # 删除映射，避免重复
         del user_message_map[original_msg_id]
+        logger.info(f"✅ 回复已发送给用户 {target_user_id}")
     except Exception as e:
         logger.error(f"回复用户失败: {e}")
         await message.reply_text("回复发送失败。")
