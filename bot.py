@@ -6,7 +6,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # ======================== 配置区（你可以任意修改） ========================
-TOKEN = "8714935528:AAENTXK-h8CagO3e5ndTCZ0AwGuR3h7-xLQ"  # 你的机器人 Token
+TOKEN = "8714935528:AAHTLZA03i41aIMP5vWwovSBklJxy81z05k"  # 你的机器人 Token
 ADMIN_ID = 7505521498  # 你的 Telegram 用户 ID
 
 # 链接追踪映射表（用户点击 ?start=xxx 时，机器人回复对应的中文）
