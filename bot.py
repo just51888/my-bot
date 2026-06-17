@@ -29,11 +29,7 @@ SOURCE_NOTIFY = "🔔 新用户来源：\n用户ID: {user_id}\n用户名: @{user
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# 存储用户消息 ID 与用户 ID 的映射
 user_message_map = {}
-
-# 存储用户 ID 与最新消息 ID 的映射（用于 /reply 命令）
-user_latest_msg = {}
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -73,7 +69,6 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             text=f"📩 用户 @{username} (ID: {user_id}) 说：\n{text}"
         )
         user_message_map[sent.message_id] = user_id
-        user_latest_msg[user_id] = sent.message_id  # 记录最新消息ID
         logger.info(f"✅ 已记录映射: 消息ID {sent.message_id} -> 用户 {user_id}")
         await update.message.reply_text(MSG_SENT)
     except Exception as e:
@@ -104,7 +99,6 @@ async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 
 async def reply_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """管理员命令：/reply 用户ID 回复内容"""
     user_id = update.effective_user.id
     if user_id != ADMIN_ID:
         await update.message.reply_text("只有管理员可以使用此命令。")
@@ -133,4 +127,5 @@ def main():
 
 
 if __name__ == "__main__":
+    main()
     main()
